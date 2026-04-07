@@ -13,6 +13,6 @@ class DiagnosisServiceStub:
     """Owns the event -> fact -> explanation pipeline."""
 
     def analyze(self, runtime: RuntimeContext, events: list[SimEvent]) -> DiagnosisBatch:
-        facts = extract_facts(runtime.session_id, events)
+        facts = extract_facts(runtime.session_id, events, runtime)
         explanations = explain_facts(facts)
         return DiagnosisBatch(facts=facts, explanations=explanations)

@@ -1,0 +1,1 @@
+本次补齐了 artifacts 模块的核心 TODO：按 `session_id` 建目录，追加写入 `event_stream.ndjson` 与 `diagnostic_facts.ndjson`，维护 `explanations.json`、`state_snapshot.json`、`manifest.json`，并导出 `repro_bundle/`。已验证 bundle 可生成。当前遗留点：公开接缝未把 scenario 原文放进 `RuntimeContext`，也未传给 `export_bundle`，因此只能在 manifest 中记录 warning，未擅自修改跨模块接口。
