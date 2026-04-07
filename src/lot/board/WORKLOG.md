@@ -1,0 +1,1 @@
+已完成 board_profile 的读取、校验、归一化；公开接口为 `load/load_profile/validate/normalize`。当前覆盖 GPIO、UART、I2C，含重复 key、引脚冲突、I2C 7-bit 地址、UART 波特率校验。排 bug 优先看 `service.py` 的 `_inspect`、`_validate_i2c_bus`、`_validate_uart_bus`；若下游异常，先核对 `BoardProfile` 字段是否仍与 `contracts.models` 对齐。

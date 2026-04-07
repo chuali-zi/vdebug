@@ -54,6 +54,8 @@ class BoardProfile(StrictModel):
     board: str = "TODO_BOARD"
     buses: dict[str, Any] = Field(default_factory=dict)
     gpio: dict[str, Any] = Field(default_factory=dict)
+    power: dict[str, Any] | None = None
+    constraints: dict[str, Any] | None = None
     raw: dict[str, Any] = Field(default_factory=dict)
 
 

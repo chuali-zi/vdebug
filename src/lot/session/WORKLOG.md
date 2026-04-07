@@ -1,0 +1,1 @@
+已补齐 session 生命周期：create/get/require_runtime/set_status/close。RuntimeContext 已冻结为 board_topology、engine_state、device_registry，并保留 now_ns 等兼容属性。元数据落盘到 runtime_sessions/<session_id>/session.json；finished/error 会写 final_snapshot.json。后续排 bug 先查状态迁移与 last_error 触发链。

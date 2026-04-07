@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from uuid import uuid4
+from typing import Annotated
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Path, Request, status
 
-from lot.api.error_mapper import map_domain_error
+from lot.api.error_mapper import request_id_from_request
 from lot.api.facade import ApiFacade
 from lot.api.models import (
     CreateSessionRequest,
@@ -14,11 +14,10 @@ from lot.api.models import (
     StepSessionRequest,
     SuccessEnvelope,
 )
-from lot.contracts.errors import DomainError
 
-
-def _request_id() -> str:
-    return f"req-{uuid4()}"
+BusSegment = Annotated[str, Path(pattern=r"^[a-z0-9_]+$")]
+ActionSegment = Annotated[str, Path(pattern=r"^[a-z0-9_]+$")]
+SessionIdSegment = Annotated[str, Path(min_length=1)]
 
 
 def build_api_router(facade: ApiFacade) -> APIRouter:
@@ -29,12 +28,11 @@ def build_api_router(facade: ApiFacade) -> APIRouter:
         response_model=SuccessEnvelope,
         responses={400: {"model": ErrorEnvelope}, 500: {"model": ErrorEnvelope}},
     )
-    def get_capabilities() -> SuccessEnvelope | ErrorEnvelope:
-        request_id = _request_id()
-        try:
-            return SuccessEnvelope(request_id=request_id, data=facade.get_capabilities())
-        except DomainError as error:
-            return map_domain_error(request_id, error)
+    def get_capabilities(request: Request) -> SuccessEnvelope:
+        return SuccessEnvelope(
+            request_id=request_id_from_request(request),
+            data=facade.get_capabilities(),
+        )
 
     @router.post(
         "/sessions",
@@ -42,72 +40,68 @@ def build_api_router(facade: ApiFacade) -> APIRouter:
         status_code=status.HTTP_201_CREATED,
         responses={400: {"model": ErrorEnvelope}, 500: {"model": ErrorEnvelope}},
     )
-    def create_session(payload: CreateSessionRequest) -> SuccessEnvelope | ErrorEnvelope:
-        request_id = _request_id()
-        try:
-            return SuccessEnvelope(request_id=request_id, data=facade.create_session(payload.model_dump()))
-        except DomainError as error:
-            return map_domain_error(request_id, error)
+    def create_session(request: Request, payload: CreateSessionRequest) -> SuccessEnvelope:
+        return SuccessEnvelope(
+            request_id=request_id_from_request(request),
+            data=facade.create_session(payload.model_dump()),
+        )
 
     @router.post(
         "/sessions/{session_id}/step",
         response_model=SuccessEnvelope,
-        responses={400: {"model": ErrorEnvelope}, 404: {"model": ErrorEnvelope}},
+        responses={400: {"model": ErrorEnvelope}, 404: {"model": ErrorEnvelope}, 500: {"model": ErrorEnvelope}},
     )
-    def step_session(session_id: str, payload: StepSessionRequest) -> SuccessEnvelope | ErrorEnvelope:
-        request_id = _request_id()
-        try:
-            return SuccessEnvelope(
-                request_id=request_id,
-                data=facade.step_session(session_id, payload.model_dump()),
-            )
-        except DomainError as error:
-            return map_domain_error(request_id, error)
+    def step_session(
+        request: Request,
+        session_id: SessionIdSegment,
+        payload: StepSessionRequest,
+    ) -> SuccessEnvelope:
+        return SuccessEnvelope(
+            request_id=request_id_from_request(request),
+            data=facade.step_session(session_id, payload.model_dump()),
+        )
 
     @router.post(
-        "/sessions/{session_id}/io/{bus_action}",
+        "/sessions/{session_id}/io/{bus}:{action}",
         response_model=SuccessEnvelope,
-        responses={400: {"model": ErrorEnvelope}, 404: {"model": ErrorEnvelope}},
+        responses={400: {"model": ErrorEnvelope}, 404: {"model": ErrorEnvelope}, 500: {"model": ErrorEnvelope}},
     )
     def execute_io(
-        session_id: str,
-        bus_action: str,
+        request: Request,
+        session_id: SessionIdSegment,
+        bus: BusSegment,
+        action: ActionSegment,
         payload: ExecuteIoRequest,
-    ) -> SuccessEnvelope | ErrorEnvelope:
-        request_id = _request_id()
-        try:
-            return SuccessEnvelope(
-                request_id=request_id,
-                data=facade.execute_io(session_id, bus_action, payload.model_dump()),
-            )
-        except DomainError as error:
-            return map_domain_error(request_id, error)
+    ) -> SuccessEnvelope:
+        return SuccessEnvelope(
+            request_id=request_id_from_request(request),
+            data=facade.execute_io(session_id, f"{bus}:{action}", payload.model_dump()),
+        )
 
     @router.get(
         "/sessions/{session_id}/state",
         response_model=SuccessEnvelope,
-        responses={404: {"model": ErrorEnvelope}},
+        responses={404: {"model": ErrorEnvelope}, 500: {"model": ErrorEnvelope}},
     )
-    def get_state(session_id: str) -> SuccessEnvelope | ErrorEnvelope:
-        request_id = _request_id()
-        try:
-            return SuccessEnvelope(request_id=request_id, data=facade.get_state(session_id))
-        except DomainError as error:
-            return map_domain_error(request_id, error)
+    def get_state(request: Request, session_id: SessionIdSegment) -> SuccessEnvelope:
+        return SuccessEnvelope(
+            request_id=request_id_from_request(request),
+            data=facade.get_state(session_id),
+        )
 
     @router.post(
         "/sessions/{session_id}/scenario:run",
         response_model=SuccessEnvelope,
-        responses={400: {"model": ErrorEnvelope}, 404: {"model": ErrorEnvelope}},
+        responses={400: {"model": ErrorEnvelope}, 404: {"model": ErrorEnvelope}, 500: {"model": ErrorEnvelope}},
     )
-    def run_scenario(session_id: str, payload: RunScenarioRequest) -> SuccessEnvelope | ErrorEnvelope:
-        request_id = _request_id()
-        try:
-            return SuccessEnvelope(
-                request_id=request_id,
-                data=facade.run_scenario(session_id, payload.model_dump()),
-            )
-        except DomainError as error:
-            return map_domain_error(request_id, error)
+    def run_scenario(
+        request: Request,
+        session_id: SessionIdSegment,
+        payload: RunScenarioRequest,
+    ) -> SuccessEnvelope:
+        return SuccessEnvelope(
+            request_id=request_id_from_request(request),
+            data=facade.run_scenario(session_id, payload.model_dump()),
+        )
 
     return router
