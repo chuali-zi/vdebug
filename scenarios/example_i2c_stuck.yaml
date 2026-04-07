@@ -1,0 +1,15 @@
+version: v1alpha1
+setup:
+  board_profile: profiles/example_stm32f4.yaml
+  seed: 42
+stimulus:
+  - at_ms: 0
+    action: i2c.transact
+    params:
+      bus: i2c0
+      addr_7bit: 0x48
+      write: [0x01]
+assertions:
+  - kind: expect_diagnosis
+    params:
+      hypothesis_contains: bus_stuck_low

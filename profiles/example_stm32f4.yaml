@@ -1,0 +1,23 @@
+version: v1alpha1
+board: example_stm32f4
+buses:
+  i2c0:
+    pins:
+      sda: PB7
+      scl: PB6
+    pullup_ohm: 4700
+    devices:
+      - addr_7bit: 0x48
+        type: TMP102
+  uart0:
+    pins:
+      tx: PA2
+      rx: PA3
+    baud: 115200
+gpio:
+  PA0:
+    direction: output
+    pull: none
+  PA1:
+    direction: input
+    pull: up
