@@ -87,15 +87,16 @@ class ApiFacade:
         return snapshot.model_dump()
 
     def run_scenario(self, session_id: str, payload: dict) -> dict:
+        session = self.session_service.get_session(session_id)
         runtime = self.session_service.get_runtime(session_id)
         plan = self.scenario_service.load_plan(
             scenario_path=payload.get("scenario_path"),
             scenario_text=payload.get("scenario_text"),
         )
-        result: ScenarioResult = self.scenario_service.run_plan(runtime, plan)
+        result: ScenarioResult = self.scenario_service.run_plan(runtime, plan, session=session)
         self.session_service.save_runtime(runtime)
         bundle = self.artifacts_service.export_bundle(
-            self.session_service.get_session(session_id),
+            session,
             runtime,
         )
         return {

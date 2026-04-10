@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from lot.board.service import BoardServiceStub
 from lot.contracts.errors import DomainError
+from tests.support import repo_temp_dir
 
 
 class BoardServiceTests(unittest.TestCase):
     def test_load_profile_normalizes_supported_buses_and_gpio(self) -> None:
-        with TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
+        with repo_temp_dir("board-service") as root:
             profile = root / "profiles" / "board.yaml"
             profile.parent.mkdir(parents=True, exist_ok=True)
             profile.write_text(
@@ -81,8 +80,7 @@ class BoardServiceTests(unittest.TestCase):
         self.assertIn("INVALID_GPIO_DIRECTION", error_codes)
 
     def test_load_profile_raises_domain_error_for_invalid_payload(self) -> None:
-        with TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
+        with repo_temp_dir("board-service") as root:
             profile = root / "invalid.yaml"
             profile.write_text(
                 "\n".join(
@@ -107,8 +105,7 @@ class BoardServiceTests(unittest.TestCase):
             self.assertTrue(ctx.exception.details["errors"])
 
     def test_load_profile_rejects_duplicate_yaml_keys(self) -> None:
-        with TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
+        with repo_temp_dir("board-service") as root:
             profile = root / "duplicate.yaml"
             profile.write_text(
                 "\n".join(

@@ -20,7 +20,25 @@ class EngineServiceTests(unittest.TestCase):
             session_id="sess-test-engine",
             board_profile=BoardProfile(
                 source_path="profiles/example_stm32f4.yaml",
+                version="v1alpha1",
                 board="example_stm32f4",
+                buses={
+                    "i2c0": {
+                        "kind": "i2c",
+                        "pins": {"sda": "PB7", "scl": "PB6"},
+                        "pullup_ohm": 4700,
+                        "devices": [{"addr_7bit": 0x48, "type": "TMP102"}],
+                    },
+                    "uart0": {
+                        "kind": "uart",
+                        "pins": {"tx": "PA2", "rx": "PA3"},
+                        "baud": 115200,
+                    },
+                },
+                gpio={
+                    "PA0": {"direction": "output", "pull": "none"},
+                    "PA1": {"direction": "input", "pull": "up"},
+                },
                 raw={"board": "example_stm32f4"},
             ),
         )
@@ -117,6 +135,28 @@ class EngineServiceTests(unittest.TestCase):
             self.engine.execute_io(self.runtime, "invalid", {})
 
         self.assertEqual(ctx.exception.error_code, "INVALID_BUS_ACTION")
+
+    def test_execute_io_invalid_gpio_payload_does_not_mutate_runtime_state(self) -> None:
+        self.engine._device_runtime(self.runtime)
+        original_pin_state = dict(self.runtime.device_state["PA0"])
+
+        with self.assertRaises(DomainError) as ctx:
+            self.engine.execute_io(self.runtime, "gpio:set", {"pin": "PA0", "value": "bad"})
+
+        self.assertEqual(ctx.exception.error_code, "INVALID_GPIO_VALUE")
+        self.assertNotIn("gpio", self.runtime.device_state)
+        self.assertEqual(self.runtime.device_state["PA0"], original_pin_state)
+
+    def test_execute_io_invalid_i2c_payload_does_not_mutate_runtime_state(self) -> None:
+        self.engine._device_runtime(self.runtime)
+        original_bus_state = dict(self.runtime.device_state["i2c0"])
+
+        with self.assertRaises(DomainError) as ctx:
+            self.engine.execute_io(self.runtime, "i2c:transact", {"bus": "i2c0", "addr_7bit": "bad"})
+
+        self.assertEqual(ctx.exception.error_code, "INVALID_I2C_ADDRESS")
+        self.assertNotIn("i2c", self.runtime.device_state)
+        self.assertEqual(self.runtime.device_state["i2c0"], original_bus_state)
 
 
 if __name__ == "__main__":

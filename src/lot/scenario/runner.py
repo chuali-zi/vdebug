@@ -13,6 +13,7 @@ from lot.contracts.models import (
     ScenarioAssertion,
     ScenarioPlan,
     ScenarioResult,
+    SessionRecord,
     SimEvent,
 )
 from lot.contracts.protocols import ArtifactsServiceProtocol, DiagnosisServiceProtocol, EngineServiceProtocol
@@ -44,6 +45,7 @@ def run_plan(
     engine: EngineServiceProtocol,
     diagnosis: DiagnosisServiceProtocol,
     artifacts: ArtifactsServiceProtocol,
+    session: SessionRecord | None = None,
 ) -> ScenarioResult:
     context = ScenarioExecutionContext(
         runtime=runtime,
@@ -72,7 +74,7 @@ def run_plan(
         status="pass" if passed else "fail",
         summary=_build_summary(passed, assertion_results, context),
         assertions=[item.model_dump() for item in assertion_results],
-        snapshot=None,
+        snapshot=artifacts.build_state_view(session, runtime) if session is not None else None,
     )
 
 
@@ -124,7 +126,7 @@ def _advance_to_assertion_horizon(
     context: ScenarioExecutionContext,
     assertions: list[ScenarioAssertion],
 ) -> None:
-    max_window_ms = max((int(assertion.params.get("within_ms", 0)) for assertion in assertions), default=0)
+    max_window_ms = max((_validated_within_ms(assertion.params) or 0 for assertion in assertions), default=0)
     horizon_ns = context.start_ns + (max_window_ms * _MS_TO_NS)
     if horizon_ns <= context.runtime.now_ns:
         return
@@ -254,7 +256,9 @@ def _evaluate_diagnosis_assertion(
     visible_events = [event for event in context.events if event.t_virtual_ns <= deadline_ns]
     visible_event_ids = {event.event_id for event in visible_events}
     visible_facts = [
-        fact for fact in context.facts if not fact.source_events or any(event_id in visible_event_ids for event_id in fact.source_events)
+        fact
+        for fact in context.facts
+        if not fact.source_events or all(event_id in visible_event_ids for event_id in fact.source_events)
     ]
     visible_explanations = [
         explanation
@@ -382,9 +386,16 @@ def _build_summary(
 
 
 def _deadline_ns(start_ns: int, params: dict[str, Any]) -> int:
-    within_ms = params.get("within_ms")
+    within_ms = _validated_within_ms(params)
     if within_ms is None:
         return 2**63 - 1
+    return start_ns + (within_ms * _MS_TO_NS)
+
+
+def _validated_within_ms(params: dict[str, Any]) -> int | None:
+    within_ms = params.get("within_ms")
+    if within_ms is None:
+        return None
     if isinstance(within_ms, bool) or not isinstance(within_ms, int) or within_ms < 0:
         raise DomainError(
             error_code="SCENARIO_ASSERTION_INVALID",
@@ -392,7 +403,7 @@ def _deadline_ns(start_ns: int, params: dict[str, Any]) -> int:
             explain="Assertion time windows are expressed in integer milliseconds from scenario start.",
             details={"within_ms": within_ms},
         )
-    return start_ns + (within_ms * _MS_TO_NS)
+    return within_ms
 
 
 def _matches_expected_fields(

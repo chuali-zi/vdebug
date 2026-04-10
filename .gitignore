@@ -1,0 +1,42 @@
+# Bytecode & Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Test / type / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+coverage.xml
+htmlcov/
+.coverage
+.coverage.*
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Project: local runtime output (sessions & artifacts)
+runtime_artifacts/
+runtime_sessions/
+
+# Reports (generated / working docs you do not want tracked)
+report/
+
+# OS / editor junk (optional noise)
+.DS_Store
+Thumbs.db
+*.swp
+*~

@@ -20,7 +20,7 @@ def load_plan_from_source(*, scenario_path: str | None, scenario_text: str | Non
             details={"has_path": has_path, "has_text": has_text},
         )
 
-    source, raw = _load_raw_payload(
+    source, source_text, raw = _load_raw_payload(
         scenario_path=scenario_path,
         scenario_text=scenario_text,
     )
@@ -71,6 +71,7 @@ def load_plan_from_source(*, scenario_path: str | None, scenario_text: str | Non
 
     return ScenarioPlan(
         source=source,
+        source_text=source_text,
         version=version.strip(),
         setup=setup,
         stimulus=sorted(
@@ -81,7 +82,7 @@ def load_plan_from_source(*, scenario_path: str | None, scenario_text: str | Non
     )
 
 
-def _load_raw_payload(*, scenario_path: str | None, scenario_text: str | None) -> tuple[str, Any]:
+def _load_raw_payload(*, scenario_path: str | None, scenario_text: str | None) -> tuple[str, str, Any]:
     source = "inline://scenario"
     try:
         if scenario_path:
@@ -89,7 +90,7 @@ def _load_raw_payload(*, scenario_path: str | None, scenario_text: str | None) -
             text = Path(scenario_path).read_text(encoding="utf-8")
         else:
             text = scenario_text or ""
-        return source, yaml.safe_load(text) or {}
+        return source, text, yaml.safe_load(text) or {}
     except OSError as exc:
         raise DomainError(
             error_code="SCENARIO_SOURCE_READ_ERROR",
@@ -188,17 +189,28 @@ def _normalize_assertion(raw: Any, index: int) -> ScenarioAssertion:
         )
 
     normalized_params = dict(params)
+    if "within_ms" in normalized_params:
+        normalized_params["within_ms"] = _validate_within_ms(
+            normalized_params["within_ms"],
+            path=[*path, "params", "within_ms"],
+        )
     if "within_ms" in raw:
-        within_ms = raw.get("within_ms")
-        if isinstance(within_ms, bool) or not isinstance(within_ms, int) or within_ms < 0:
-            raise _dsl_error(
-                "Assertion within_ms must be a non-negative integer.",
-                path=[*path, "within_ms"],
-                details={"value": within_ms},
-            )
-        normalized_params["within_ms"] = within_ms
+        normalized_params["within_ms"] = _validate_within_ms(
+            raw.get("within_ms"),
+            path=[*path, "within_ms"],
+        )
 
     return ScenarioAssertion(kind=kind, params=normalized_params)
+
+
+def _validate_within_ms(value: Any, *, path: list[object]) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise _dsl_error(
+            "Assertion within_ms must be a non-negative integer.",
+            path=path,
+            details={"value": value},
+        )
+    return value
 
 
 def _dsl_error(message: str, *, path: list[object], details: dict[str, object]) -> DomainError:

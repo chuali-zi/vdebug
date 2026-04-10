@@ -28,6 +28,8 @@ class RuntimeContext(StrictModel):
     recent_events: list[SimEvent] = Field(default_factory=list)
     recent_facts: list[DiagnosticFact] = Field(default_factory=list)
     recent_explanations: list[Explanation] = Field(default_factory=list)
+    scenario_source: str | None = None
+    scenario_source_text: str | None = None
     exported_artifacts: dict[str, str] = Field(default_factory=dict)
 
     def model_post_init(self, __context: Any) -> None:

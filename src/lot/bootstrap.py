@@ -29,16 +29,21 @@ class AppContainer:
 
 
 def build_container(base_dir: Path | None = None) -> AppContainer:
-    root = base_dir or Path.cwd()
+    workspace_root = Path.cwd()
+    root = base_dir or workspace_root
     device_registry = build_default_device_registry()
-    board_service = BoardServiceStub(root_dir=root)
-    session_service = SessionServiceStub()
+    board_service = BoardServiceStub(root_dir=workspace_root)
+    session_service = SessionServiceStub(storage_dir=root / "runtime_sessions")
     engine_service = EngineServiceStub(device_registry=device_registry)
     diagnosis_service = DiagnosisServiceStub()
     artifacts_service = ArtifactsServiceStub(
         config=ArtifactStoreConfig(root_dir=root / "runtime_artifacts")
     )
-    scenario_service = ScenarioServiceStub()
+    scenario_service = ScenarioServiceStub(
+        engine_service=engine_service,
+        diagnosis_service=diagnosis_service,
+        artifacts_service=artifacts_service,
+    )
     capabilities = CapabilitiesProvider.from_registry(device_registry)
 
     api_facade = ApiFacade(

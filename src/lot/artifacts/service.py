@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from shutil import copy2
@@ -91,10 +89,11 @@ class ArtifactsServiceStub:
                 f"board profile source unavailable via path: {session.board_profile}"
             )
 
-        if not paths.scenario_source.exists():
+        if runtime.scenario_source_text:
+            paths.scenario_source.write_text(runtime.scenario_source_text, encoding="utf-8")
+        elif not paths.scenario_source.exists():
             warnings.append(
-                "scenario source unavailable: current public seam does not store it on "
-                "RuntimeContext or pass it into export_bundle"
+                f"scenario source unavailable via source: {runtime.scenario_source or 'unknown'}"
             )
 
         manifest = self._manifest_payload(runtime, paths, session=session, warnings=warnings)
@@ -112,7 +111,7 @@ class ArtifactsServiceStub:
             "session_dir": str(paths.session_dir),
             "bundle_path": str(paths.bundle_dir),
             "manifest": str(paths.bundle_dir / paths.manifest.name),
-            "included_files": json.dumps(included_files, ensure_ascii=False),
+            "included_files": included_files,
         }
         return runtime.exported_artifacts
 

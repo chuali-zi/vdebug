@@ -44,7 +44,12 @@ class DiagnosisServiceProtocol(Protocol):
 class ScenarioServiceProtocol(Protocol):
     def load_plan(self, *, scenario_path: str | None, scenario_text: str | None) -> ScenarioPlan: ...
 
-    def run_plan(self, runtime: RuntimeContext, plan: ScenarioPlan) -> ScenarioResult: ...
+    def run_plan(
+        self,
+        runtime: RuntimeContext,
+        plan: ScenarioPlan,
+        session: SessionRecord | None = None,
+    ) -> ScenarioResult: ...
 
 
 class ArtifactsServiceProtocol(Protocol):

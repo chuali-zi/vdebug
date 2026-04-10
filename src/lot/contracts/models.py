@@ -126,6 +126,7 @@ class ScenarioAssertion(StrictModel):
 
 class ScenarioPlan(StrictModel):
     source: str
+    source_text: str | None = None
     version: str = "v1alpha1"
     setup: dict[str, Any] = Field(default_factory=dict)
     stimulus: list[ScenarioAction] = Field(default_factory=list)

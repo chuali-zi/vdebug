@@ -4,6 +4,11 @@ setup:
   seed: 42
 stimulus:
   - at_ms: 0
+    action: fault.inject
+    params:
+      bus: i2c0
+      fault_kind: i2c_sda_stuck_low
+  - at_ms: 1
     action: i2c.transact
     params:
       bus: i2c0

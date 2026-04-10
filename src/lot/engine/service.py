@@ -177,19 +177,8 @@ class EngineServiceStub:
             return outcome["result"], [event]
 
         bus, action = self._parse_bus_action(bus_action)
-        bus_state = runtime.device_state.setdefault(bus, {})
-        if not isinstance(bus_state, dict):
-            bus_state = {}
-            runtime.device_state[bus] = bus_state
-
-        if bus == "gpio":
-            self._apply_gpio_action(bus_state, action, payload)
-        elif bus == "uart":
-            self._apply_uart_action(bus_state, action, payload)
-        elif bus == "i2c":
-            self._apply_i2c_action(bus_state, action, payload)
-
         outcome = device_runtime.execute(bus_action, dict(payload), effective_now_ns)
+        self._update_public_bus_state(runtime, bus, action, payload)
         event_type = f"{bus.upper()}_{action.upper()}"
         if scheduled_kind is not None:
             event_type = f"SCHEDULED_{event_type}"
@@ -219,6 +208,25 @@ class EngineServiceStub:
         if not runtime.device_registry.get("devices"):
             device_runtime.register_from_board(runtime.board_profile)
         return device_runtime
+
+    def _update_public_bus_state(
+        self,
+        runtime: RuntimeContext,
+        bus: str,
+        action: str,
+        payload: dict[str, object],
+    ) -> None:
+        current_bus_state = runtime.device_state.get(bus, {})
+        bus_state = deepcopy(current_bus_state) if isinstance(current_bus_state, dict) else {}
+
+        if bus == "gpio":
+            self._apply_gpio_action(bus_state, action, payload)
+        elif bus == "uart":
+            self._apply_uart_action(bus_state, action, payload)
+        elif bus == "i2c":
+            self._apply_i2c_action(bus_state, action, payload)
+
+        runtime.device_state[bus] = bus_state
 
     def _apply_gpio_action(
         self,

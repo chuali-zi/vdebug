@@ -188,6 +188,35 @@ class ApiContractTests(unittest.TestCase):
         self.assertEqual(payload["error"]["error_code"], "INVALID_REQUEST")
         self.assert_request_id(response)
 
+    def test_scenario_invalid_normalized_within_ms_returns_domain_error(self) -> None:
+        session_response = self.request(
+            "POST",
+            "/v1/sessions",
+            {"board_profile": "profiles/example_stm32f4.yaml"},
+        )
+        session_id = session_response.json()["data"]["session"]["session_id"]
+
+        response = self.request(
+            "POST",
+            f"/v1/sessions/{session_id}/scenario:run",
+            {
+                "scenario_text": """
+version: v1alpha1
+assertions:
+  - kind: expect_event
+    params:
+      type: GPIO_SET
+      within_ms: foo
+""".strip()
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["error"]["error_code"], "SCENARIO_DSL_INVALID")
+        self.assert_request_id(response)
+
 
 if __name__ == "__main__":
     unittest.main()
